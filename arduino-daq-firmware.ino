@@ -6,7 +6,7 @@
 
 // command: *idn?
 // <Manufacturer>,<Model>,<Serial Number>,<Firmware Level>,<Options>
-#define IDN "BDG GmbH,arduino-daq-firmware,1,20240106"
+#define IDN "BDG GmbH,arduino-daq-firmware,1,20240303"
 
 // Arduino Nano
 // D13 = LED_BUILTIN
@@ -49,6 +49,7 @@ unsigned long delayAi = 0;
 String oldDiState = "";
 String oldAiState = "";
 String temp;
+int aosValues[sizeof(AIS) / sizeof(int)];
 
 void setup() {
 
@@ -192,11 +193,11 @@ void OnDataReceived()
       Serial.print("--- ");
       Serial.print(CMD_HELP);
       Serial.println(" ---");
-      
+
       Serial.print("*idn?\t");
       Serial.println(IDN);
-      
-      Serial.println("{\"read\":\"di\"}         (di=false/true, ai=0..1023)");
+
+      Serial.println("{\"read\":\"di\"}         (di=false/true, do=false/true, ai=0..1023, ao=0..255)");
       Serial.println("{\"diInterval\":0}      (0[ms]=off)");
       Serial.println("{\"aiInterval\":0}      (0[ms]=off)");
       Serial.println("{\"onChange\":true}     (false=send every ms, true=send on change)");
@@ -373,10 +374,18 @@ String ReadInputs(String json)
     oldDiState = GetDis();
     Serial.println(oldDiState);
   }
+  else if (json.startsWith("do"))
+  {
+    Serial.println(GetDos());
+  }
   else if (json.startsWith("ai"))
   {
     oldAiState = GetAis();
     Serial.println(oldAiState);
+  }
+  else if (json.startsWith("ao"))
+  {
+    Serial.println(GetAos());
   }
   else
   {
@@ -424,6 +433,41 @@ String GetDis()
 }
 
 
+String GetDos()
+{
+  String json = "{\"do\":[";
+
+  for (byte i = 0; i < sizeof(DOS) / sizeof(int); i++) {
+
+    if (digitalRead(DOS[i]))
+    {
+      json += "true,";
+    }
+    else
+    {
+      json += "false,";
+    }
+  }
+
+  if (json.endsWith(","))
+  {
+    json.remove(json.length() - 1, 1);
+  }
+
+  if (TIMESTAMP)
+  {
+    json += "]," + GetTime() + "}";
+  }
+  else
+  {
+    json += "]}";
+  }
+
+  //Serial.println(json);
+  return json;
+}
+
+
 String GetAis()
 {
   String json = "{\"ai\":[";
@@ -431,6 +475,35 @@ String GetAis()
   for (byte i = 0; i < sizeof(AIS) / sizeof(int); i++) {
 
     json += analogRead(AIS[i]);
+    json += ",";
+  }
+
+  if (json.endsWith(","))
+  {
+    json.remove(json.length() - 1, 1);
+  }
+
+  if (TIMESTAMP)
+  {
+    json += "]," + GetTime() + "}";
+  }
+  else
+  {
+    json += "]}";
+  }
+
+  //Serial.println(json);
+  return json;
+}
+
+
+String GetAos()
+{
+  String json = "{\"ao\":[";
+
+  for (byte i = 0; i < sizeof(aosValues) / sizeof(int); i++) {
+
+    json += aosValues[i];
     json += ",";
   }
 
@@ -564,8 +637,6 @@ String SetAos(String json)
       json.remove(0, 1);
     }
 
-    no++;
-
     int pwm = value.toInt();
     bool ignore = false;
 
@@ -582,7 +653,10 @@ String SetAos(String json)
     {
       //Serial.println(pwm);
       analogWrite(port, pwm);
+      aosValues[no] = pwm;
     }
+
+    no++;
 
   } while (json.startsWith("]") == false);
 
