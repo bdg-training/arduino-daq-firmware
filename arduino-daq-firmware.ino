@@ -6,7 +6,7 @@
 
 // command: *idn?
 // <Manufacturer>,<Model>,<Serial Number>,<Firmware Level>,<Options>
-#define IDN "BDG GmbH,arduino-daq-firmware,1,20240303"
+#define IDN "BDG GmbH,arduino-daq-firmware,1.01,20250312"
 
 // Arduino Nano
 // D13 = LED_BUILTIN
@@ -30,7 +30,7 @@ bool onChange = true;
 
 #define LF 10
 #define CR 13
-#define RX_SIZE  512
+#define RX_SIZE  64
 byte RxIndex = 0;
 char RxBuffer[RX_SIZE + 1];
 
@@ -49,7 +49,7 @@ unsigned long delayAi = 0;
 String oldDiState = "";
 String oldAiState = "";
 String temp;
-int aosValues[sizeof(AIS) / sizeof(int)];
+int aosValues[sizeof(AOS) / sizeof(int)];
 
 void setup() {
 
